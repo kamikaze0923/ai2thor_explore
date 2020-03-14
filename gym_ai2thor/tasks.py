@@ -42,6 +42,7 @@ class ExploreAllObjects(BaseTask):
         super().__init__(kwargs)
         self.target_objects = kwargs['task'].get('target_objects', {})
         self.discoverd = set()
+        # self.never_found = set(self.target_objects.keys())
 
     def transition_reward(self, state, action_str=None):
         reward, done = self.movement_reward, False
@@ -52,6 +53,7 @@ class ExploreAllObjects(BaseTask):
                 x, y, z = obj['position']['x'], obj['position']['y'], obj['position']['z']
                 # print("Found {} at {}, {}, {}".format(obj['name'], x, y, z))
                 reward += self.target_objects.get(obj['name'], 0)
+                # self.never_found.discard(obj['name'])
 
         if self.max_episode_length and self.step_num >= self.max_episode_length or \
                 len(self.discoverd) == len(self.target_objects):
@@ -61,6 +63,7 @@ class ExploreAllObjects(BaseTask):
             print('Totally found objects {}/{} with {} steps'.format(len(self.discoverd), len(self.target_objects),
                                                                      self.step_num))
             done = True
+            # print(self.never_found)
 
         return reward, done
 

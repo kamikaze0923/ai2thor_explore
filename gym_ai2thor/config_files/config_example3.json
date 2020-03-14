@@ -1,5 +1,8 @@
 {
-    "open_close_interaction": false,
+    "open_close_interaction": true,
+    "openable_objects": [
+        "Fridge"
+    ],
     "pickup_put_interaction": false,
     "scene_id": "FloorPlan28",
     "grayscale": true,

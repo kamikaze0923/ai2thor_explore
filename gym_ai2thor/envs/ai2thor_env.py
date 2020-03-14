@@ -60,11 +60,14 @@ class AI2ThorEnv(gym.Env):
             self.seed(seed)
         # Object settings
         # acceptable objects taken from config file.
-        if self.config['pickup_put_interaction'] or \
-                            self.config['open_close_interaction']:
-            self.objects = {'pickupables': self.config['pickup_objects'],
-                            'receptacles': self.config['acceptable_receptacles'],
-                            'openables':   self.config['openable_objects']}
+        self.objects = {}
+        if self.config['pickup_put_interaction']:
+            self.objects['pickupables'] = self.config['pickup_objects']
+            self.objects['receptacles'] = self.config['acceptable_receptacles']
+
+        if self.config['open_close_interaction']:
+            self.objects['openables'] = self.config['openable_objects']
+
         # Action settings
         self.action_names = tuple(ALL_POSSIBLE_ACTIONS.copy())
         # remove open/close and pickup/put actions if respective interaction bool is set to False
