@@ -9,6 +9,7 @@
     "resolution": [128, 128],
     "cameraY": 0.0,
     "gridSize": 0.1,
+    "movement_reward": -0.1,
     "continuous_movement": true,
     "build_file_name": false,
     "task": {
