@@ -142,7 +142,7 @@ def train(rank, args, shared_model, counter, lock, optimizer):
             R = R.cuda()
             gae = gae.cuda()
         if not done:  # to change last reward to predicted value to ....
-            value, _, _ = model((state.unsqueeze(0).float(), (hx, cx)))
+            value, _, _ = model((state, (hx, cx)))
             R = value.detach()
 
         values.append(R)

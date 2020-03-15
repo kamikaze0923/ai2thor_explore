@@ -7,7 +7,7 @@
     "scene_id": "FloorPlan28",
     "grayscale": true,
     "resolution": [128, 128],
-    "cameraY": 1.0,
+    "cameraY": 0.0,
     "gridSize": 0.1,
     "movement_reward": -0.1,
     "continuous_movement": true,

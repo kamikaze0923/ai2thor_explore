@@ -52,7 +52,7 @@ parser.add_argument('--max-episode-length', type=int, default=1000,
                     help='maximum length of an episode (default: 1000000)')
 
 parser.add_argument('--point-cloud-model', action='store_false', help='Use point cloud feature instead of frames')
-parser.set_defaults(point_cloud_model=True)
+parser.set_defaults(point_cloud_model=False)
 
 parser.add_argument('--no_cuda', action='store_true', help='Disable GPU')
 parser.set_defaults(no_cuda=False)
