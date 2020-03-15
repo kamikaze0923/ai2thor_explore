@@ -3,6 +3,7 @@ Auxiliary functions for building environments
 """
 import os
 import json
+import csv
 import warnings
 
 from gym import error
@@ -68,6 +69,18 @@ def read_config(config_path, config_dict=None):
                 config[key] = config_dict[key]
 
     return config
+
+class CSVLogger(object):
+    def __init__(self, fname):
+        self.f = open(fname, 'w')
+        self.logger = csv.writer(self.f)
+
+    def log(self, fields):
+        self.logger.writerow(fields)
+        self.f.flush()
+
+    def close(self):
+        self.f.close()
 
 
 class InvalidTaskParams(Exception):

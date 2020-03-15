@@ -109,7 +109,7 @@ def train(rank, args, shared_model, counter, lock, optimizer):
                 episode_total_rewards_list.append(total_reward_for_episode)
                 all_rewards_in_episode = []
                 state = env.reset()
-                print('Process {} Episode {} Over with Length: {} and Reward: {}. Total Trained Length: {}'.format(
+                print('Process {} Episode {} Over with Length: {} and Reward: {: .2f}. Total Trained Length: {}'.format(
                     rank, n_episode, episode_length, total_reward_for_episode, total_length))
                 sys.stdout.flush()
                 episode_length = 0

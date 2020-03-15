@@ -13,8 +13,10 @@ import torch
 import torch.nn.functional as F
 
 from gym_ai2thor.envs.ai2thor_env import AI2ThorEnv
+from gym_ai2thor.utils import CSVLogger
 from algorithms.a3c.model import ActorCritic
 
+import os
 
 def test(rank, args, shared_model, counter):
     torch.manual_seed(args.seed + rank)
@@ -36,10 +38,19 @@ def test(rank, args, shared_model, counter):
     reward_sum = 0
     done = True
 
+    save = '{}-steps{}-process{}-lr{}-entropy_coef{}'.format("point" if args.point_cloud_model else "conv",
+        args.num_steps, args.num_processes, args.lr, args.entropy_coef)
+    save = os.path.join('logs', save)
+    os.makedirs(save, exist_ok=True)
+
+    logger = CSVLogger(os.path.join(save, 'test.csv'))
+    fileds = ['episode_reward', 'frames_rendered']
+    logger.log(fileds)
+
     start_time = time.time()
 
     # a quick hack to prevent the agent from stucking
-    actions = deque(maxlen=100)
+    # actions = deque(maxlen=100)
     episode_length = 0
     while True:
         episode_length += 1
@@ -75,28 +86,29 @@ def test(rank, args, shared_model, counter):
 
         # a quick hack to prevent the agent from stucking
         # i.e. in test mode an agent can repeat an action ad infinitum
-        actions.append(action[0, 0])
-        if actions.count(actions[0]) == actions.maxlen:
-            print('In test. Episode over because agent repeated action {} times'.format(
-                                                                                actions.maxlen))
-            done = True
+        # actions.append(action[0, 0])
+        # if actions.count(actions[0]) == actions.maxlen:
+        #     print('In test. Episode over because agent repeated action {} times'.format(
+        #                                                                         actions.maxlen))
+        #     done = True
 
         if done:
-            print("Time {}, num steps over all threads {}, FPS {:.0f}, episode reward {}, episode length {}".format(
-                time.strftime("%Hh %Mm %Ss",
-                              time.gmtime(time.time() - start_time)),
+            print("Time {}, num steps over all threads {}, FPS {:.0f}, episode reward {: .2f}, episode length {}".format(
+                time.strftime("%Hh %Mm %Ss", time.gmtime(time.time() - start_time)),
                 counter.value, counter.value / (time.time() - start_time),
                 reward_sum, episode_length))
+            logger.log(["{: .2f}".format(reward_sum), counter.value])
 
             if reward_sum >= args.solved_reward:
                 print("Solved Testing with Reward {}".format(reward_sum))
-                torch.save(model.state_dict(), "solved_{}.pth".format("atari" if args.atari else "ai2thor"))
+                torch.save(model.state_dict(), os.path.join(save, "solved_ai2thor.pth"))
                 env.close()
+                logger.close()
                 break
 
             reward_sum = 0
             episode_length = 0
-            actions.clear()
+            # actions.clear()
             state = env.reset()
             time.sleep(args.test_sleep_time)
 
