@@ -34,7 +34,7 @@ parser.add_argument('--gamma', type=float, default=0.99,
                     help='discount factor for rewards (default: 0.99)')
 parser.add_argument('--tau', type=float, default=1.00,
                     help='parameter for GAE (default: 1.00)')
-parser.add_argument('--entropy-coef', type=float, default=0.1,
+parser.add_argument('--entropy-coef', type=float, default=0.01,
                     help='entropy term coefficient (default: 0.01)')
 parser.add_argument('--value-loss-coef', type=float, default=0.5,
                     help='value loss coefficient (default: 0.5)')
@@ -51,7 +51,10 @@ parser.add_argument('--num-steps', type=int, default=20,
 parser.add_argument('--max-episode-length', type=int, default=1000,
                     help='maximum length of an episode (default: 1000000)')
 
-parser.add_argument('--no_cuda', action='store_true')
+parser.add_argument('--point-cloud-model', action='store_false', help='Use point cloud feature instead of frames')
+parser.set_defaults(point_cloud_model=True)
+
+parser.add_argument('--no_cuda', action='store_true', help='Disable GPU')
 parser.set_defaults(no_cuda=False)
 
 parser.add_argument('-sync', '--synchronous', dest='synchronous', action='store_true',
@@ -59,16 +62,14 @@ parser.add_argument('-sync', '--synchronous', dest='synchronous', action='store_
                          'Overwrites args.num_processes as everything is in main thread. '
                          '1 train() function is run and no test()')
 parser.add_argument('-async', '--asynchronous', dest='synchronous', action='store_false')
+parser.set_defaults(synchronous=True)
+
 parser.add_argument('--solved-reward', type=int, default=90,
                     help='stop when episode reward exceed this number')
+
 parser.add_argument('--model', action='store_false',
                     help='load the model for test')
 parser.set_defaults(model=False)
-
-parser.set_defaults(synchronous=False)
-
-
-
 
 if __name__ == '__main__':
     mp.set_start_method("spawn")
@@ -82,12 +83,15 @@ if __name__ == '__main__':
         torch.cuda.init()
 
     torch.manual_seed(args.seed)
-
-    args.config_dict = {'max_episode_length': args.max_episode_length}
+    args.config_dict = {'max_episode_length': args.max_episode_length, 'point_cloud_model': args.point_cloud_model}
     env = AI2ThorEnv(config_dict=args.config_dict)
-    args.frame_dim = env.config['resolution'][-1]
 
-    shared_model = ActorCritic(env.observation_space.shape[0], env.action_space.n, args.frame_dim)
+    if args.point_cloud_model:
+        shared_model = ActorCritic(env.action_space.n)
+    else:
+        args.frame_dim = env.config['resolution'][-1]
+        shared_model = ActorCritic(env.action_space.n, env.observation_space.shape[0], args.frame_dim)
+
     if args.model:
         shared_model.load_state_dict(torch.load("solved_ai2thor.pth"))
     if args.cuda:
@@ -117,7 +121,6 @@ if __name__ == '__main__':
 
         for w in worker_processes:
             w.terminate()
-
     else:
         rank = 0
         # test(args.num_processes, args, shared_model, counter)  # for checking test functionality

@@ -11,34 +11,14 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-
-def calculate_lstm_input_size_after_4_conv_layers(frame_dim, stride=2, kernel_size=3, padding=1,
-                                     num_filters=8):
-    """
-    Assumes square resolution image. Find LSTM size after 4 conv layers below in A3C using regular
-    Convolution math. For example:
-    42x42 -> (42 − 3 + 2)÷ 2 + 1 = 21x21 after 1 layer
-    11x11 after 2 layers -> 6x6 after 3 -> and finally 3x3 after 4 layers
-    Therefore lstm input size after flattening would be (3 * 3 * num_filters)
-    """
-
-    width = (frame_dim - kernel_size + 2 * padding) // stride + 1
-    width = (width - kernel_size + 2 * padding) // stride + 1
-    width = (width - kernel_size + 2 * padding) // stride + 1
-    width = (width - kernel_size + 2 * padding) // stride + 1
-
-    return width * width * num_filters
-
 def normalized_columns_initializer(weights, std=1.0):
     """
     Weights are normalized over their column. Also, allows control over std which is useful for
     initialising action logit output so that all actions have similar likelihood
     """
-
     out = torch.randn(weights.size())
     out *= std / torch.sqrt(out.pow(2).sum(1, keepdim=True))
     return out
-
 
 def weights_init(m):
     classname = m.__class__.__name__
@@ -57,6 +37,58 @@ def weights_init(m):
         m.weight.data.uniform_(-w_bound, w_bound)
         m.bias.data.fill_(0)
 
+class FrameEncoder(torch.nn.Module):
+    def __init__(self, num_input_channels, frame_dim):
+        super(FrameEncoder, self).__init__()
+        self.frame_dim = frame_dim
+        self.num_filter = 8
+        self.stride = 2
+        self.kernel_size = 3
+        self.padding = 1
+        self.conv1 = nn.Conv2d(num_input_channels, 64, self.kernel_size, stride=self.stride, padding=self.padding)
+        self.conv2 = nn.Conv2d(64, 32, self.kernel_size, stride=self.stride, padding=self.padding)
+        self.conv3 = nn.Conv2d(32, 16, self.kernel_size, stride=self.stride, padding=self.padding)
+        self.conv4 = nn.Conv2d(16, self.num_filter, self.kernel_size, stride=self.stride, padding=self.padding)
+
+    def forward(self, inputs):
+        x = F.elu(self.conv1(inputs))
+        x = F.elu(self.conv2(x))
+        x = F.elu(self.conv3(x))
+        x = F.elu(self.conv4(x))
+        return x
+
+    def calculate_lstm_input_size(self):
+        """
+        Assumes square resolution image. Find LSTM size after 4 conv layers below in A3C using regular
+        Convolution math. For example:
+        42x42 -> (42 − 3 + 2)÷ 2 + 1 = 21x21 after 1 layer
+        11x11 after 2 layers -> 6x6 after 3 -> and finally 3x3 after 4 layers
+        Therefore lstm input size after flattening would be (3 * 3 * num_filters)
+        """
+        width = (self.frame_dim - self.kernel_size + 2 * self.padding) // self.stride + 1
+        width = (width - self.kernel_size + 2 * self.padding) // self.stride + 1
+        width = (width - self.kernel_size + 2 * self.padding) // self.stride + 1
+        width = (width - self.kernel_size + 2 * self.padding) // self.stride + 1
+        return width * width * self.num_filter
+
+class PointCloudEncoder(torch.nn.Module):
+    def __init__(self):
+        super(PointCloudEncoder, self).__init__()
+        self.n_agent_feature = 5
+        self.n_point_feature = 64
+        self.shared_mlp = nn.Conv1d(in_channels=3, out_channels=self.n_point_feature, kernel_size=1, stride=1)
+
+    def forward(self, inputs):
+        obj_point, agent_feature = inputs
+        point_features = self.shared_mlp(obj_point)
+        aggregate_features = torch.max(point_features, dim=-1)[0]
+        return torch.cat([aggregate_features, agent_feature], dim=1)
+
+    def calculate_lstm_input_size(self):
+        return self.n_point_feature + self.n_agent_feature
+
+
+
 
 class ActorCritic(torch.nn.Module):
     """
@@ -69,16 +101,16 @@ class ActorCritic(torch.nn.Module):
     The final output is then predicted value, action logits, hx and cx.
     """
 
-    def __init__(self, num_input_channels, num_outputs, frame_dim):
+    def __init__(self, num_outputs, num_input_channels=None, frame_dim=None):
         super(ActorCritic, self).__init__()
-        self.conv1 = nn.Conv2d(num_input_channels, 64, 3, stride=2, padding=1)
-        self.conv2 = nn.Conv2d(64, 32, 3, stride=2, padding=1)
-        self.conv3 = nn.Conv2d(32, 16, 3, stride=2, padding=1)
-        self.conv4 = nn.Conv2d(16, 8, 3, stride=2, padding=1)
 
-        # assumes square image
-        self.lstm_cell_size = calculate_lstm_input_size_after_4_conv_layers(frame_dim)
+        if num_input_channels is not None and frame_dim is not None:
+            self.feature_encoder = FrameEncoder(num_input_channels, frame_dim)
+        else:
+            assert num_input_channels is None and frame_dim is None
+            self.feature_encoder = PointCloudEncoder()
 
+        self.lstm_cell_size = self.feature_encoder.calculate_lstm_input_size()
         self.lstm = nn.LSTMCell(self.lstm_cell_size, 64)  # for 128x128 input
 
         self.critic_linear = nn.Linear(64, 1)
@@ -99,13 +131,7 @@ class ActorCritic(torch.nn.Module):
 
     def forward(self, inputs):
         inputs, (hx, cx) = inputs
-        if len(inputs.size()) == 3:  # if batch forgotten
-            inputs = inputs.unsqueeze(0)
-        x = F.elu(self.conv1(inputs))
-        x = F.elu(self.conv2(x))
-        x = F.elu(self.conv3(x))
-        x = F.elu(self.conv4(x))
-
+        x = self.feature_encoder(inputs)
         x = x.view(-1, self.lstm_cell_size)
         hx, cx = self.lstm(x, (hx, cx))
         x = hx

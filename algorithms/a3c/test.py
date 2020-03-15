@@ -18,19 +18,21 @@ from algorithms.a3c.model import ActorCritic
 
 def test(rank, args, shared_model, counter):
     torch.manual_seed(args.seed + rank)
-
-    args.config_dict = {'max_episode_length': args.max_episode_length}
     env = AI2ThorEnv(config_dict=args.config_dict)
     env.seed(args.seed + rank)
 
-    model = ActorCritic(env.observation_space.shape[0], env.action_space.n, args.frame_dim)
+    if args.point_cloud_model:
+        model = ActorCritic(env.action_space.n)
+    else:
+        args.frame_dim = env.config['resolution'][-1]
+        model = ActorCritic(env.action_space.n, env.observation_space.shape[0], args.frame_dim)
+
     if args.cuda:
         model = model.cuda()
 
     model.eval()
 
     state = env.reset()
-    state = torch.from_numpy(state)
     reward_sum = 0
     done = True
 
@@ -95,4 +97,3 @@ def test(rank, args, shared_model, counter):
             state = env.reset()
             time.sleep(args.test_sleep_time)
 
-        state = torch.from_numpy(state)

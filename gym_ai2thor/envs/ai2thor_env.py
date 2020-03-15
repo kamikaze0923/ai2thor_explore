@@ -17,6 +17,7 @@ from gym_ai2thor.image_processing import rgb2gray
 from gym_ai2thor.utils import read_config
 import gym_ai2thor.tasks
 
+import torch
 
 ALL_POSSIBLE_ACTIONS = [
     'MoveAhead',
@@ -58,6 +59,7 @@ class AI2ThorEnv(gym.Env):
         self.np_random = None
         if seed:
             self.seed(seed)
+
         # Object settings
         # acceptable objects taken from config file.
         self.objects = {}
@@ -236,12 +238,22 @@ class AI2ThorEnv(gym.Env):
             raise NotImplementedError('action_str: {} is not implemented'.format(action_str))
 
         self.task.step_num += 1
-        state_image = self.preprocess(self.event.frame)
 
         reward, done = self.task.transition_reward(self.event, action_str)
         info = {}
 
-        return state_image, reward, done, info
+        return self.get_observation(), reward, done, info
+
+    def get_observation(self):
+        if not self.config['point_cloud_model']:
+            obs = torch.from_numpy(self.preprocess(self.event.frame)).unsqueeze(0).float()
+
+        else:
+            obj_points_feature = self.get_point_cloud(self.event)
+            agent_info = self.get_agent_info(self.event)
+            obs = (torch.from_numpy(obj_points_feature).unsqueeze(0).float(),
+                   torch.from_numpy(agent_info).unsqueeze(0).float())
+        return obs
 
     def preprocess(self, img):
         """
@@ -255,6 +267,25 @@ class AI2ThorEnv(gym.Env):
         img = np.moveaxis(img, 2, 0)
         return img
 
+    def get_point_cloud(self, event):
+        return np.array(list(map(lambda obj: [obj['position']['x'], obj['position']['y'], obj['position']['z']],
+                                   event.metadata['objects']))).transpose()
+
+    def get_agent_info(self, event):
+        metadata = event.metadata
+        position = [metadata['cameraPosition']['x'], metadata['cameraPosition']['y'], metadata['cameraPosition']['z']]
+        rotation_x = metadata['agent']['rotation']['x']
+        rotation_y = metadata['agent']['rotation']['y']
+        rotation_z = metadata['agent']['rotation']['z']
+        assert rotation_x == 0
+        assert rotation_z == 0
+        look_angle = metadata['agent']['cameraHorizon']
+        assert round(look_angle) in [-30, 0, 30, 60]
+        if look_angle == 330:
+            look_angle -= 360
+        return np.array(position + [rotation_y * 2 * np.pi / 360] + [look_angle * 2 * np.pi / 360])
+
+
     def reset(self):
         # print('Resetting environment and starting new episode')
         self.controller.reset(self.scene_id)
@@ -265,11 +296,7 @@ class AI2ThorEnv(gym.Env):
                                                renderObjectImage=self.render_options['object'],
                                                continuous=self.continuous_movement))
         self.task.reset()
-        state = self.preprocess(self.event.frame)
-        return state
-
-    def render(self, mode='human'):
-        raise NotImplementedError
+        return self.get_observation()
 
     def seed(self, seed=None):
         self.np_random, seed1 = seeding.np_random(seed)

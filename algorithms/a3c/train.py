@@ -33,18 +33,20 @@ def ensure_shared_grads(model, shared_model):
 
 def train(rank, args, shared_model, counter, lock, optimizer):
     torch.manual_seed(args.seed + rank)
-
-    args.config_dict = {'max_episode_length': args.max_episode_length}
     env = AI2ThorEnv(config_dict=args.config_dict)
     env.seed(args.seed + rank)
 
-    model = ActorCritic(env.observation_space.shape[0], env.action_space.n, args.frame_dim)
+    if args.point_cloud_model:
+        model = ActorCritic(env.action_space.n)
+    else:
+        args.frame_dim = env.config['resolution'][-1]
+        model = ActorCritic(env.action_space.n, env.observation_space.shape[0], args.frame_dim)
+
     if args.cuda:
         model = model.cuda()
     model.train()
 
     state = env.reset()
-    state = torch.from_numpy(state)
     done = True
 
     # monitoring
@@ -77,10 +79,13 @@ def train(rank, args, shared_model, counter, lock, optimizer):
             episode_length += 1
             total_length += 1
             if args.cuda:
-                state = state.cuda()
+                if args.point_cloud_model:
+                    state = state.cuda()
+                else:
+                    state = (state[0].cuda(), state[1].cuda())
                 cx = cx.cuda()
                 hx = hx.cuda()
-            value, logit, (hx, cx) = model((state.unsqueeze(0).float(), (hx, cx)))
+            value, logit, (hx, cx) = model((state, (hx, cx)))
             prob = F.softmax(logit, dim=-1)
             log_prob = F.log_softmax(logit, dim=-1)
             entropy = -(log_prob * prob).sum(1, keepdim=True)
@@ -110,7 +115,6 @@ def train(rank, args, shared_model, counter, lock, optimizer):
                 episode_length = 0
                 n_episode += 1
 
-            state = torch.from_numpy(state)
             values.append(value)
             rewards.append(reward)
             all_rewards_in_episode.append(reward)
