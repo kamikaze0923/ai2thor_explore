@@ -80,9 +80,9 @@ def train(rank, args, shared_model, counter, lock, optimizer):
             total_length += 1
             if args.cuda:
                 if args.point_cloud_model:
-                    state = state.cuda()
-                else:
                     state = (state[0].cuda(), state[1].cuda())
+                else:
+                    state = state.cuda()
                 cx = cx.cuda()
                 hx = hx.cuda()
             value, logit, (hx, cx) = model((state, (hx, cx)))

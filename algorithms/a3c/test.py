@@ -55,9 +55,9 @@ def test(rank, args, shared_model, counter):
         with torch.no_grad():
             if args.cuda:
                 if args.point_cloud_model:
-                    state = state.cuda()
-                else:
                     state = (state[0].cuda(), state[1].cuda())
+                else:
+                    state = state.cuda()
                 cx = cx.cuda()
                 hx = hx.cuda()
             value, logit, (hx, cx) = model((state, (hx, cx)))
