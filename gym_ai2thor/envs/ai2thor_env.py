@@ -268,8 +268,9 @@ class AI2ThorEnv(gym.Env):
         return img
 
     def get_point_cloud(self, event):
+        visible_objects = [obj for obj in event.metadata['objects'] if obj['visible']]
         return np.array(list(map(lambda obj: [obj['position']['x'], obj['position']['y'], obj['position']['z']],
-                                   event.metadata['objects']))).transpose()
+                                   visible_objects))).transpose()
 
     def get_agent_info(self, event):
         metadata = event.metadata
