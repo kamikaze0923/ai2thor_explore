@@ -111,10 +111,10 @@ class ActorCritic(torch.nn.Module):
             self.feature_encoder = PointCloudEncoder()
 
         self.lstm_cell_size = self.feature_encoder.calculate_lstm_input_size()
-        self.lstm = nn.LSTMCell(self.lstm_cell_size, 64)  # for 128x128 input
+        self.lstm = nn.LSTMCell(self.lstm_cell_size, 256)  # for 128x128 input
 
-        self.critic_linear = nn.Linear(64, 1)
-        self.actor_linear = nn.Linear(64, num_outputs)
+        self.critic_linear = nn.Linear(256, 1)
+        self.actor_linear = nn.Linear(256, num_outputs)
 
         self.apply(weights_init)
         self.actor_linear.weight.data = normalized_columns_initializer(
