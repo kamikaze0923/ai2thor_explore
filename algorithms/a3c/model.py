@@ -75,13 +75,19 @@ class PointCloudEncoder(torch.nn.Module):
     def __init__(self):
         super(PointCloudEncoder, self).__init__()
         self.n_agent_feature = 5
+        self.ori_point_dim = 3
+        self.ori_feature_dim = 1
         self.n_point_feature = 64
-        self.shared_mlp = nn.Conv1d(in_channels=3, out_channels=self.n_point_feature, kernel_size=1, stride=1)
+        self.shared_mlp = nn.Conv1d(in_channels=self.ori_point_dim, out_channels=self.n_point_feature,
+                                    kernel_size=1, stride=1)
 
     def forward(self, inputs):
-        obj_point, agent_feature = inputs
+        obj_point_and_feature, agent_feature = inputs
+        obj_point, obj_feature = obj_point_and_feature[:,:self.ori_point_dim,:], \
+                                 obj_point_and_feature[:,self.ori_point_dim:self.ori_point_dim + self.ori_feature_dim, :]
+
         point_features = self.shared_mlp(obj_point)
-        aggregate_features = torch.max(point_features, dim=-1)[0]
+        aggregate_features = torch.matmul(obj_feature, point_features.transpose(1,2)).flatten(start_dim=1)
         return torch.cat([aggregate_features, agent_feature], dim=1)
 
     def calculate_lstm_input_size(self):

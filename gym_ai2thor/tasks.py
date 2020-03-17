@@ -60,7 +60,8 @@ class ExploreAllObjects(BaseTask):
             if len(self.discoverd) == len(self.target_objects):
                 print("Used {} steps to find all objects".format(self.step_num))
                 reward += 50
-            print('Totally found objects {}/{} with {} steps'.format(len(self.discoverd), len(self.target_objects),
+            else:
+                print('Totally found objects {}/{} with {} steps'.format(len(self.discoverd), len(self.target_objects),
                                                                      self.step_num))
             done = True
             # print(self.never_found)

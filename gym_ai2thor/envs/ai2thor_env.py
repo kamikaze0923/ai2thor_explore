@@ -111,7 +111,10 @@ class AI2ThorEnv(gym.Env):
         except Exception as e:
             raise ValueError('Error occurred while creating task. Exception: {}'.format(e))
         # Start ai2thor
-        self.controller = ai2thor.controller.Controller(quality="Very Low")
+        headless = False
+        if self.config['point_cloud_model']:
+            headless = True
+        self.controller = ai2thor.controller.Controller(quality="Very Low", headless=headless)
         if self.config.get('build_file_name'):
             # file must be in gym_ai2thor/build_files
             self.build_file_path = os.path.abspath(os.path.join(__file__, '../../build_files',
@@ -268,9 +271,24 @@ class AI2ThorEnv(gym.Env):
         return img
 
     def get_point_cloud(self, event):
-        visible_objects = [obj for obj in event.metadata['objects'] if obj['visible']]
-        return np.array(list(map(lambda obj: [obj['position']['x'], obj['position']['y'], obj['position']['z']],
+        visible_objects = []
+        not_visible_objects = []
+        for obj in event.metadata['objects']:
+            if obj['visible']:
+                visible_objects.append(obj)
+            else:
+                not_visible_objects.append(obj)
+        visible_array = np.array(list(map(lambda obj: [obj['position']['x'], obj['position']['y'], obj['position']['z'], 1],
                                    visible_objects))).transpose()
+        not_visible_array = np.array(list(map(lambda obj: [obj['position']['x'], obj['position']['y'], obj['position']['z'], 0],
+                                   not_visible_objects))).transpose()
+        if visible_objects == []:
+            cat_array = not_visible_array
+        elif not_visible_objects == []:
+            cat_array = visible_array
+        else:
+            cat_array = np.concatenate([visible_array, not_visible_array], axis=1)
+        return cat_array
 
     def get_agent_info(self, event):
         metadata = event.metadata

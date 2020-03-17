@@ -52,7 +52,7 @@ parser.add_argument('--max-episode-length', type=int, default=1000,
                     help='maximum length of an episode (default: 1000000)')
 
 parser.add_argument('--point-cloud-model', action='store_false', help='Use point cloud feature instead of frames')
-parser.set_defaults(point_cloud_model=False)
+parser.set_defaults(point_cloud_model=True)
 
 parser.add_argument('--no_cuda', action='store_true', help='Disable GPU')
 parser.set_defaults(no_cuda=False)
@@ -62,7 +62,7 @@ parser.add_argument('-sync', '--synchronous', dest='synchronous', action='store_
                          'Overwrites args.num_processes as everything is in main thread. '
                          '1 train() function is run and no test()')
 parser.add_argument('-async', '--asynchronous', dest='synchronous', action='store_false')
-parser.set_defaults(synchronous=False)
+parser.set_defaults(synchronous=True)
 
 parser.add_argument('--solved-reward', type=int, default=90,
                     help='stop when episode reward exceed this number')
