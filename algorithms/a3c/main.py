@@ -64,7 +64,7 @@ parser.add_argument('-sync', '--synchronous', dest='synchronous', action='store_
 parser.add_argument('-async', '--asynchronous', dest='synchronous', action='store_false')
 parser.set_defaults(synchronous=True)
 
-parser.add_argument('--solved-reward', type=int, default=90,
+parser.add_argument('--solved-reward', type=int, default=102,
                     help='stop when episode reward exceed this number')
 
 parser.add_argument('--model', action='store_false',

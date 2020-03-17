@@ -17,6 +17,7 @@ from gym_ai2thor.utils import CSVLogger
 from algorithms.a3c.model import ActorCritic
 
 import os
+from copy import deepcopy
 
 def test(rank, args, shared_model, counter):
     torch.manual_seed(args.seed + rank)
@@ -56,7 +57,7 @@ def test(rank, args, shared_model, counter):
         episode_length += 1
         # Sync with the shared model
         if done:
-            model.load_state_dict(shared_model.state_dict())
+            model.load_state_dict(deepcopy(shared_model.state_dict()))
             cx = torch.zeros(1, 256)
             hx = torch.zeros(1, 256)
         else:
