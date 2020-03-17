@@ -115,15 +115,6 @@ class AI2ThorEnv(gym.Env):
         if self.config['point_cloud_model']:
             headless = True
         self.controller = ai2thor.controller.Controller(quality="Very Low", headless=headless)
-        if self.config.get('build_file_name'):
-            # file must be in gym_ai2thor/build_files
-            self.build_file_path = os.path.abspath(os.path.join(__file__, '../../build_files',
-                                                                self.config['build_file_name']))
-            print('Build file path at: {}'.format(self.build_file_path))
-            if not os.path.exists(self.build_file_path):
-                raise ValueError('Unity build file at:\n{}\n does not exist'.format(
-                    self.build_file_path))
-            self.controller.local_executable_path = self.build_file_path
 
         # self.controller.start()
 
