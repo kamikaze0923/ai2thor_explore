@@ -92,8 +92,7 @@ if __name__ == '__main__':
         args.frame_dim = env.config['resolution'][-1]
         shared_model = ActorCritic(env.action_space.n, env.observation_space.shape[0], args.frame_dim)
 
-    if args.model:
-        shared_model.load_state_dict(torch.load("solved_ai2thor.pth"))
+
     if args.cuda:
         shared_model = shared_model.cuda()
     shared_model.share_memory()

@@ -44,9 +44,12 @@ def test(rank, args, shared_model, counter):
     save = os.path.join('logs', save)
     os.makedirs(save, exist_ok=True)
 
-    logger = CSVLogger(os.path.join(save, 'test.csv'))
-    fileds = ['episode_reward', 'frames_rendered']
-    logger.log(fileds)
+    if args.model:
+        shared_model.load_state_dict(torch.load(os.path.join(save, "solved_ai2thor.pth")))
+    else:
+        logger = CSVLogger(os.path.join(save, 'test.csv'))
+        fileds = ['episode_reward', 'frames_rendered']
+        logger.log(fileds)
 
     start_time = time.time()
 
@@ -98,7 +101,8 @@ def test(rank, args, shared_model, counter):
                 time.strftime("%Hh %Mm %Ss", time.gmtime(time.time() - start_time)),
                 counter.value, counter.value / (time.time() - start_time),
                 reward_sum, episode_length))
-            logger.log(["{: .2f}".format(reward_sum), counter.value])
+            if not args.model:
+                logger.log(["{: .2f}".format(reward_sum), counter.value])
 
             if reward_sum >= args.solved_reward:
                 print("Solved Testing with Reward {}".format(reward_sum))
