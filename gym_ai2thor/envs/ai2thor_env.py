@@ -241,7 +241,6 @@ class AI2ThorEnv(gym.Env):
     def get_observation(self):
         if not self.config['point_cloud_model']:
             obs = torch.from_numpy(self.preprocess(self.event.frame)).unsqueeze(0).float()
-
         else:
             obj_points_feature = self.get_point_cloud(self.event)
             agent_info = self.get_agent_info(self.event)
