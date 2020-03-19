@@ -1,4 +1,5 @@
 {
+    "render_options": {"depth": false, "object": false},
     "open_close_interaction": true,
     "openable_objects": [
         "Fridge"
