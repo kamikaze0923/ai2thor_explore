@@ -138,7 +138,10 @@ def train(rank, args, shared_model, counter, lock, optimizer):
         R = torch.zeros(1, 1)
         gae = torch.zeros(1, 1)
         if args.cuda:
-            state = state.cuda()
+            if args.point_cloud_model:
+                state = (state[0].cuda(), state[1].cuda())
+            else:
+                state = state.cuda()
             R = R.cuda()
             gae = gae.cuda()
         if not done:  # to change last reward to predicted value to ....
