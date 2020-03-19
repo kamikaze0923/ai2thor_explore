@@ -111,10 +111,10 @@ class AI2ThorEnv(gym.Env):
         except Exception as e:
             raise ValueError('Error occurred while creating task. Exception: {}'.format(e))
         # Start ai2thor
-        headless = False
-        if self.config['point_cloud_model']:
-            headless = True
-        self.controller = ai2thor.controller.Controller(quality="Very Low", headless=headless)
+        # headless = False
+        # if self.config['point_cloud_model']:
+        #     headless = True
+        self.controller = ai2thor.controller.Controller(quality="Very Low")
 
         # self.controller.start()
 
